@@ -94,3 +94,9 @@ The backend image uses `uv` to create its own environment (`uv sync`) and run th
 - `widgets/` — board, columns, cards, confetti
 - `features/todos/` — task API, store, and UI
 - `shared/` — reusable UI components and utilities
+
+## License
+
+This project is licensed under the [Apache License 2.0](LICENSE).
+
+> Copyright 2026 Daniel Acosta. See [`LICENSE`](LICENSE) for details.
