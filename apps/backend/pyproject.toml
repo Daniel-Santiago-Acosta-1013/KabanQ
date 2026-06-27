@@ -1,0 +1,11 @@
+[project]
+name = "todo-backend"
+version = "1.0.0"
+description = "Todo CQRS API"
+requires-python = ">=3.13"
+dependencies = [
+    "fastapi==0.115.12",
+    "uvicorn==0.34.2",
+    "pydantic==2.11.6",
+    "python-multipart==0.0.20",
+]
