@@ -1,3 +1,3 @@
-export * from "./model";
+export { useAppStore, useTodoStore } from "./store";
 export * from "./api";
-export * from "./store";
+export * from "./model";

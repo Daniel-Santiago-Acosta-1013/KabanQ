@@ -1,19 +1,18 @@
 import * as React from "react";
-import { createTodo } from "../api";
-import type { TodoStatus } from "../model";
+import { createIssue } from "../api";
 import { Input } from "@/shared/ui/input";
 import { cn } from "@/shared/lib/utils";
 import { Plus } from "lucide-react";
 
 interface QuickCreateTaskProps {
-  status: TodoStatus;
+  statusId: number;
   onCreated?: () => void;
   color?: string;
   variant?: "card" | "list";
 }
 
 export function QuickCreateTask({
-  status,
+  statusId,
   onCreated,
   color,
   variant = "card",
@@ -24,9 +23,7 @@ export function QuickCreateTask({
   const inputRef = React.useRef<HTMLInputElement>(null);
 
   React.useEffect(() => {
-    if (isOpen) {
-      inputRef.current?.focus();
-    }
+    if (isOpen) inputRef.current?.focus();
   }, [isOpen]);
 
   const handleSubmit = async (e?: React.FormEvent) => {
@@ -37,7 +34,7 @@ export function QuickCreateTask({
     }
     setLoading(true);
     try {
-      await createTodo({ title, description: "", status });
+      await createIssue({ title, description: "", status_id: statusId });
       setTitle("");
       setIsOpen(false);
       onCreated?.();
@@ -66,7 +63,7 @@ export function QuickCreateTask({
           className="group flex w-full items-center gap-2 px-4 py-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground"
         >
           <Plus className="h-3.5 w-3.5 transition-transform group-hover:scale-110" />
-          <span>Add task</span>
+          <span>Add issue</span>
         </button>
       );
     }
@@ -74,11 +71,14 @@ export function QuickCreateTask({
     return (
       <form onSubmit={handleSubmit} className="relative px-4 py-1.5">
         <div className="absolute left-7 top-1/2 -translate-y-1/2">
-          <div className={cn("h-1.5 w-1.5 rounded-full", color ?? "bg-slate-400")} />
+          <div
+            className={cn("h-1.5 w-1.5 rounded-full")}
+            style={{ backgroundColor: color ?? "#94a3b8" }}
+          />
         </div>
         <Input
           ref={inputRef}
-          placeholder="Task title..."
+          placeholder="Issue title..."
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           onKeyDown={handleKeyDown}
@@ -100,7 +100,7 @@ export function QuickCreateTask({
         className="group flex w-full items-center gap-2 rounded-lg border border-transparent px-2 py-2 text-sm text-muted-foreground transition-colors hover:border-border hover:bg-accent/50 hover:text-foreground"
       >
         <Plus className="h-4 w-4 transition-transform group-hover:scale-110" />
-        <span>Add task</span>
+        <span>Add issue</span>
       </button>
     );
   }
@@ -108,11 +108,14 @@ export function QuickCreateTask({
   return (
     <form onSubmit={handleSubmit} className="relative">
       <div className="absolute left-3 top-1/2 -translate-y-1/2">
-        <div className={cn("h-2 w-2 rounded-full", color ?? "bg-slate-400")} />
+        <div
+          className={cn("h-2 w-2 rounded-full")}
+          style={{ backgroundColor: color ?? "#94a3b8" }}
+        />
       </div>
       <Input
         ref={inputRef}
-        placeholder="Task title..."
+        placeholder="Issue title..."
         value={title}
         onChange={(e) => setTitle(e.target.value)}
         onKeyDown={handleKeyDown}

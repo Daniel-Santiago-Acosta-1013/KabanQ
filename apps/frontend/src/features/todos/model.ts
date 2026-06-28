@@ -1,40 +1,117 @@
-export type TodoStatus = "backlog" | "todo" | "in_progress" | "done";
+export type Priority = "urgent" | "high" | "medium" | "low";
 
-export interface Todo {
+export interface Status {
   id: number;
-  title: string;
-  description: string;
-  status: TodoStatus;
-  position?: number;
+  name: string;
+  slug: string;
+  color: string;
+  position: number;
   created_at: string;
   updated_at: string;
 }
 
-export interface BoardData {
-  board: Record<TodoStatus, Todo[]>;
-  counts: Record<TodoStatus, number>;
+export interface Label {
+  id: number;
+  name: string;
+  color: string;
+  created_at: string;
+  updated_at: string;
 }
 
-export type TodoCreatePayload = {
+export interface Project {
+  id: number;
+  name: string;
+  description: string;
+  color: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Cycle {
+  id: number;
+  name: string;
+  start_date: string | null;
+  end_date: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CustomField {
+  id: number;
+  name: string;
+  field_type: "text" | "number" | "date" | "select";
+  options: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Relation {
+  id: number;
+  source_id: number;
+  target_id: number;
+  relation_type: string;
+  target_title: string;
+}
+
+export interface Issue {
+  id: number;
   title: string;
   description: string;
-  status: TodoStatus;
-  position?: number;
-};
+  status_id: number | null;
+  status_slug?: string;
+  status_name?: string;
+  status_color?: string;
+  priority: Priority;
+  position: number;
+  due_date: string | null;
+  estimate: number | null;
+  project_id: number | null;
+  project_name?: string;
+  project_color?: string;
+  cycle_id: number | null;
+  cycle_name?: string;
+  parent_id: number | null;
+  created_at: string;
+  updated_at: string;
+  label_ids: number[];
+  labels: Label[];
+  sub_issues: Issue[];
+  relations: Relation[];
+  custom_field_values: { custom_field_id: number; value: string; field_name?: string; field_type?: string }[];
+}
 
-export type TodoUpdatePayload = {
+export interface BoardData {
+  board: Record<string, Issue[]>;
+  counts: Record<string, number>;
+  statuses: Status[];
+}
+
+export type IssueCreatePayload = {
   title: string;
-  description: string;
-  status: TodoStatus;
+  description?: string;
+  status_id?: number | null;
+  priority?: Priority;
   position?: number;
+  due_date?: string | null;
+  estimate?: number | null;
+  project_id?: number | null;
+  cycle_id?: number | null;
+  parent_id?: number | null;
+  label_ids?: number[];
+  custom_field_values?: { custom_field_id: number; value: string }[];
 };
 
-export const TODO_STATUSES: { value: TodoStatus; label: string; color: string }[] = [
-  { value: "backlog", label: "Backlog", color: "bg-slate-500" },
-  { value: "todo", label: "To Do", color: "bg-blue-500" },
-  { value: "in_progress", label: "In Progress", color: "bg-amber-500" },
-  { value: "done", label: "Done", color: "bg-emerald-500" },
+export type IssueUpdatePayload = Partial<IssueCreatePayload>;
+
+export const PRIORITIES: { value: Priority; label: string; color: string }[] = [
+  { value: "urgent", label: "Urgent", color: "#ef4444" },
+  { value: "high", label: "High", color: "#f97316" },
+  { value: "medium", label: "Medium", color: "#3b82f6" },
+  { value: "low", label: "Low", color: "#22c55e" },
 ];
 
-export const statusLabel = (status: TodoStatus) =>
-  TODO_STATUSES.find((s) => s.value === status)?.label ?? status;
+export const priorityLabel = (priority: Priority) =>
+  PRIORITIES.find((p) => p.value === priority)?.label ?? priority;
+
+export const priorityColor = (priority: Priority) =>
+  PRIORITIES.find((p) => p.value === priority)?.color ?? "#94a3b8";

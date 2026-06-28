@@ -1,34 +1,23 @@
-import { Todo } from "@/features/todos/model";
-import { TodoEditDialog } from "@/features/todos/ui/TodoEditDialog";
-import { TodoDeleteButton } from "@/features/todos/ui/TodoDeleteButton";
-import { useTodoStore } from "@/features/todos";
+import { Issue } from "@/features/todos/model";
+import { useAppStore } from "@/features/todos";
 import { cn } from "@/shared/lib/utils";
-import { GripVertical, CheckCircle2 } from "lucide-react";
-import { statusLabel } from "@/features/todos/model";
+import { GripVertical, Calendar, Clock } from "lucide-react";
 import { RichTextContent } from "@/shared/ui/rich-text-content";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import { useNavigate, useLocation } from "react-router-dom";
+import { Badge } from "@/shared/ui/badge";
+import { priorityColor, priorityLabel } from "@/features/todos/model";
 
 interface TodoItemProps {
-  todo: Todo;
+  issue: Issue;
+  isOverlay?: boolean;
 }
 
-const statusStyles: Record<Todo["status"], string> = {
-  backlog: "border-l-slate-400",
-  todo: "border-l-blue-500",
-  in_progress: "border-l-amber-500",
-  done: "border-l-emerald-500",
-};
-
-const statusBadgeStyles: Record<Todo["status"], string> = {
-  backlog: "bg-slate-100 text-slate-700 dark:bg-slate-900 dark:text-slate-300",
-  todo: "bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300",
-  in_progress: "bg-amber-50 text-amber-700 dark:bg-amber-950 dark:text-amber-300",
-  done: "bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300",
-};
-
-export function TodoItem({ todo }: TodoItemProps) {
-  const loadBoard = useTodoStore((state) => state.loadBoard);
+export function TodoItem({ issue, isOverlay }: TodoItemProps) {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { selectedIssueIds } = useAppStore();
   const {
     attributes,
     listeners,
@@ -36,7 +25,7 @@ export function TodoItem({ todo }: TodoItemProps) {
     transform,
     transition,
     isDragging,
-  } = useSortable({ id: todo.id });
+  } = useSortable({ id: issue.id });
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -44,57 +33,94 @@ export function TodoItem({ todo }: TodoItemProps) {
     zIndex: isDragging ? 50 : undefined,
   };
 
+  const isSelected = selectedIssueIds.includes(issue.id);
+
+  const openDetail = (e: React.MouseEvent) => {
+    if ((e.target as HTMLElement).closest("[data-drag-handle]")) return;
+    navigate(`${location.pathname}?issue=${issue.id}`);
+  };
+
   return (
     <div
       ref={setNodeRef}
       style={style}
+      onClick={openDetail}
       className={cn(
-        "group relative rounded-lg border border-border/60 border-l-[5px] bg-card shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md animate-in fade-in slide-in-from-bottom-3",
-        statusStyles[todo.status],
-        todo.status === "done" && "opacity-75",
-        isDragging && "opacity-40 shadow-none ring-2 ring-primary/30"
+        "group relative cursor-pointer rounded-lg border border-border/60 bg-card shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md",
+        isSelected && "ring-2 ring-primary/50",
+        isDragging && "opacity-40 shadow-none ring-2 ring-primary/30",
+        isOverlay && "rotate-2 scale-105 shadow-xl"
       )}
       {...attributes}
       {...listeners}
     >
-      <div className="flex items-start gap-1 px-3 pt-3">
-        <GripVertical className="mt-0.5 h-4 w-4 shrink-0 cursor-grab text-muted-foreground/40 active:cursor-grabbing" />
+      <div
+        className="absolute left-0 top-0 h-full w-1 rounded-l-lg"
+        style={{ backgroundColor: issue.status_color ?? "#94a3b8" }}
+      />
+
+      <div className="flex items-start gap-1 px-3 pt-3 pl-4">
+        <div
+          data-drag-handle
+          className="mt-0.5 cursor-grab text-muted-foreground/40 active:cursor-grabbing"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <GripVertical className="h-4 w-4 shrink-0" />
+        </div>
         <div className="flex-1">
           <h3
             className={cn(
               "text-sm font-medium leading-snug",
-              todo.status === "done" && "line-through text-muted-foreground"
+              issue.status_slug === "done" && "line-through text-muted-foreground"
             )}
           >
-            {todo.title}
+            {issue.title}
           </h3>
         </div>
       </div>
 
-      {todo.description && (
-        <div className="px-3 pb-2 pt-0">
-          <RichTextContent html={todo.description} compact />
+      {issue.description && (
+        <div className="px-3 pb-2 pl-4 pt-0">
+          <RichTextContent html={issue.description} compact />
         </div>
       )}
 
-      <div className="flex items-center justify-between px-3 pb-3 pt-0">
-        <span
-          className={cn(
-            "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide",
-            statusBadgeStyles[todo.status]
-          )}
-        >
-          {todo.status === "done" && <CheckCircle2 className="h-3 w-3" />}
-          {statusLabel(todo.status)}
-        </span>
+      <div className="flex flex-wrap items-center gap-1.5 px-3 pb-3 pl-4 pt-0">
+        {issue.labels.map((label) => (
+          <Badge
+            key={label.id}
+            variant="outline"
+            className="text-[10px] font-normal"
+            style={{ borderColor: label.color, color: label.color }}
+          >
+            {label.name}
+          </Badge>
+        ))}
 
-        <div
-          className="flex items-center opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100"
-          onPointerDown={(e) => e.stopPropagation()}
+        <Badge
+          className="text-[10px]"
+          style={{
+            backgroundColor: `${priorityColor(issue.priority)}20`,
+            color: priorityColor(issue.priority),
+            borderColor: "transparent",
+          }}
         >
-          <TodoEditDialog todo={todo} onUpdated={loadBoard} />
-          <TodoDeleteButton todoId={todo.id} onDeleted={loadBoard} />
-        </div>
+          {priorityLabel(issue.priority)}
+        </Badge>
+
+        {issue.due_date && (
+          <span className="flex items-center gap-1 text-[10px] text-muted-foreground">
+            <Calendar className="h-3 w-3" />
+            {new Date(issue.due_date).toLocaleDateString()}
+          </span>
+        )}
+
+        {issue.estimate !== null && issue.estimate !== undefined && (
+          <span className="flex items-center gap-1 text-[10px] text-muted-foreground">
+            <Clock className="h-3 w-3" />
+            {issue.estimate}m
+          </span>
+        )}
       </div>
     </div>
   );

@@ -1,96 +1,87 @@
-import { Todo } from "@/features/todos/model";
-import { TodoEditDialog } from "@/features/todos/ui/TodoEditDialog";
-import { TodoDeleteButton } from "@/features/todos/ui/TodoDeleteButton";
-import { TodoStatusSelect } from "@/features/todos/ui/TodoStatusSelect";
-import { useTodoStore } from "@/features/todos";
-import { updateTodo } from "@/features/todos/api";
+import { Issue } from "@/features/todos/model";
+import { useAppStore } from "@/features/todos";
 import { cn } from "@/shared/lib/utils";
-import { statusLabel } from "@/features/todos/model";
-import { RichTextContent } from "@/shared/ui/rich-text-content";
-import { useState } from "react";
+import { priorityColor, priorityLabel } from "@/features/todos/model";
+import { Badge } from "@/shared/ui/badge";
+import { Calendar, Clock } from "lucide-react";
+import { useNavigate, useLocation } from "react-router-dom";
 
 interface TodoListItemProps {
-  todo: Todo;
+  issue: Issue;
   index: number;
 }
 
-const statusDotStyles: Record<Todo["status"], string> = {
-  backlog: "bg-slate-400",
-  todo: "bg-blue-500",
-  in_progress: "bg-amber-500",
-  done: "bg-emerald-500",
-};
-
-export function TodoListItem({ todo, index }: TodoListItemProps) {
-  const loadBoard = useTodoStore((state) => state.loadBoard);
-  const [updating, setUpdating] = useState(false);
-
-  const handleStatusChange = async (status: Todo["status"]) => {
-    if (status === todo.status) return;
-    setUpdating(true);
-    try {
-      await updateTodo(todo.id, {
-        title: todo.title,
-        description: todo.description,
-        status,
-      });
-      await loadBoard();
-    } finally {
-      setUpdating(false);
-    }
-  };
-
-  const handleDragStart = (e: React.DragEvent<HTMLDivElement>) => {
-    e.dataTransfer.setData("text/plain", String(todo.id));
-    e.dataTransfer.effectAllowed = "move";
-  };
+export function TodoListItem({ issue, index }: TodoListItemProps) {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { toggleSelectedIssue, selectedIssueIds } = useAppStore();
+  const isSelected = selectedIssueIds.includes(issue.id);
 
   return (
     <div
-      draggable
-      onDragStart={handleDragStart}
+      onClick={() => navigate(`${location.pathname}?issue=${issue.id}`)}
       className={cn(
-        "group flex items-center gap-3 border-b border-border/40 px-4 py-2.5 transition-colors hover:bg-accent/40 cursor-grab active:cursor-grabbing animate-in fade-in",
-        todo.status === "done" && "opacity-60"
+        "group flex cursor-pointer items-center gap-3 border-b border-border/40 px-4 py-3 transition-colors hover:bg-accent/40 animate-in fade-in",
+        isSelected && "bg-accent/60",
+        index === 0 && "border-t-0"
       )}
       style={{
         animationDelay: `${index * 20}ms`,
         animationFillMode: "backwards",
       }}
     >
-      <span
-        className={cn(
-          "h-1.5 w-1.5 shrink-0 rounded-full ring-2 ring-background",
-          statusDotStyles[todo.status]
-        )}
+      <input
+        type="checkbox"
+        checked={isSelected}
+        onClick={(e) => e.stopPropagation()}
+        onChange={() => toggleSelectedIssue(issue.id)}
+        className="h-4 w-4 rounded border-muted-foreground"
       />
 
-      <div className="flex flex-1 items-center gap-3 min-w-0">
-        <span
-          className={cn(
-            "truncate text-sm",
-            todo.status === "done" && "line-through text-muted-foreground"
+      <span
+        className="h-2 w-2 shrink-0 rounded-full"
+        style={{ backgroundColor: issue.status_color ?? "#94a3b8" }}
+      />
+
+      <div className="flex flex-1 flex-col gap-1 min-w-0">
+        <span className="truncate text-sm font-medium">{issue.title}</span>
+        <div className="flex flex-wrap items-center gap-1.5">
+          {issue.labels.map((label) => (
+            <Badge
+              key={label.id}
+              variant="outline"
+              className="text-[10px] font-normal"
+              style={{ borderColor: label.color, color: label.color }}
+            >
+              {label.name}
+            </Badge>
+          ))}
+          <Badge
+            className="text-[10px]"
+            style={{
+              backgroundColor: `${priorityColor(issue.priority)}20`,
+              color: priorityColor(issue.priority),
+            }}
+          >
+            {priorityLabel(issue.priority)}
+          </Badge>
+          {issue.due_date && (
+            <span className="flex items-center gap-1 text-[10px] text-muted-foreground">
+              <Calendar className="h-3 w-3" />
+              {new Date(issue.due_date).toLocaleDateString()}
+            </span>
           )}
-        >
-          {todo.title}
-        </span>
-        {todo.description && (
-          <div className="hidden sm:block min-w-0 flex-1">
-            <RichTextContent html={todo.description} compact />
-          </div>
-        )}
-      </div>
-
-      <div className="flex items-center gap-1 opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100">
-        <div className="hidden sm:block">
-          <TodoStatusSelect value={todo.status} onChange={handleStatusChange} disabled={updating} />
+          {issue.estimate !== null && issue.estimate !== undefined && (
+            <span className="flex items-center gap-1 text-[10px] text-muted-foreground">
+              <Clock className="h-3 w-3" />
+              {issue.estimate}m
+            </span>
+          )}
         </div>
-        <TodoEditDialog todo={todo} onUpdated={loadBoard} />
-        <TodoDeleteButton todoId={todo.id} onDeleted={loadBoard} />
       </div>
 
-      <span className="text-xs text-muted-foreground sm:hidden">
-        {statusLabel(todo.status)}
+      <span className="text-xs text-muted-foreground">
+        {issue.status_name ?? "No status"}
       </span>
     </div>
   );

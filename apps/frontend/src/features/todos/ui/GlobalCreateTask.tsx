@@ -1,31 +1,35 @@
 import * as React from "react";
-import { createTodo } from "../api";
-import type { TodoStatus } from "../model";
+import { createIssue } from "../api";
 import { Input } from "@/shared/ui/input";
 import { Plus, Command } from "lucide-react";
+import { cn } from "@/shared/lib/utils";
+import { useAppStore } from "@/features/todos";
 
 interface GlobalCreateTaskProps {
   onCreated?: () => void;
-  defaultStatus?: TodoStatus;
 }
 
-export function GlobalCreateTask({
-  onCreated,
-  defaultStatus = "backlog",
-}: GlobalCreateTaskProps) {
+export function GlobalCreateTask({ onCreated }: GlobalCreateTaskProps) {
   const [isFocused, setIsFocused] = React.useState(false);
   const [title, setTitle] = React.useState("");
   const [loading, setLoading] = React.useState(false);
   const inputRef = React.useRef<HTMLInputElement>(null);
+  const { statuses, loadBoard } = useAppStore();
 
   const handleSubmit = async (e?: React.FormEvent) => {
     e?.preventDefault();
     if (!title.trim()) return;
     setLoading(true);
     try {
-      await createTodo({ title, description: "", status: defaultStatus });
+      const firstStatus = statuses[0];
+      await createIssue({
+        title,
+        description: "",
+        status_id: firstStatus?.id,
+      });
       setTitle("");
       onCreated?.();
+      await loadBoard();
       inputRef.current?.focus();
     } finally {
       setLoading(false);
@@ -52,14 +56,11 @@ export function GlobalCreateTask({
           (target.tagName === "INPUT" ||
             target.tagName === "TEXTAREA" ||
             target.isContentEditable);
-
         if (isOtherInput) return;
-
         e.preventDefault();
         inputRef.current?.focus();
       }
     };
-
     window.addEventListener("keydown", handleGlobalKeyDown);
     return () => window.removeEventListener("keydown", handleGlobalKeyDown);
   }, []);
@@ -67,17 +68,17 @@ export function GlobalCreateTask({
   return (
     <form
       onSubmit={handleSubmit}
-      className={
-        "flex items-center gap-2 rounded-lg border bg-card px-3 py-2 transition-all " +
-        (isFocused
+      className={cn(
+        "flex items-center gap-2 rounded-lg border bg-card px-3 py-2 transition-all",
+        isFocused
           ? "border-primary/50 ring-1 ring-primary/20"
-          : "border-border hover:border-border/80")
-      }
+          : "border-border hover:border-border/80"
+      )}
     >
       <Plus className="h-4 w-4 text-muted-foreground" />
       <Input
         ref={inputRef}
-        placeholder="Create new task..."
+        placeholder="Create new issue..."
         value={title}
         onChange={(e) => setTitle(e.target.value)}
         onKeyDown={handleKeyDown}

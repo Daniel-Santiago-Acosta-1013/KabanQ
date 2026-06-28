@@ -1,38 +1,32 @@
 import * as React from "react";
-import { useSearchParams } from "react-router-dom";
 import { useAppStore } from "@/features/todos";
-import { TodoBoard } from "@/widgets/TodoBoard";
+import { TodoListView } from "@/widgets/TodoListView";
 import { FiltersBar } from "@/widgets/FiltersBar";
 import { ViewToggle } from "@/widgets/ViewToggle";
 import { GlobalCreateTask } from "@/features/todos/ui/GlobalCreateTask";
-import { IssueDetail } from "@/widgets/IssueDetail";
 import { Button } from "@/shared/ui/button";
 import { RotateCcw } from "lucide-react";
 
-export function BoardPage() {
-  const { loadBoard, loading, error, board } = useAppStore();
-  const [searchParams, setSearchParams] = useSearchParams();
-  const issueId = searchParams.get("issue");
+export function ListPage() {
+  const { loadIssues, loading, error, issues } = useAppStore();
 
   React.useEffect(() => {
-    loadBoard();
-  }, [loadBoard]);
+    loadIssues();
+  }, [loadIssues]);
 
   return (
     <div className="flex h-full flex-col">
       <header className="flex items-center justify-between border-b bg-card px-6 py-3">
         <div>
-          <h1 className="text-lg font-semibold tracking-tight">Board</h1>
-          <p className="text-xs text-muted-foreground">
-            {board ? Object.values(board.board).flat().length : 0} issues
-          </p>
+          <h1 className="text-lg font-semibold tracking-tight">List</h1>
+          <p className="text-xs text-muted-foreground">{issues.length} issues</p>
         </div>
         <div className="flex items-center gap-2">
           <ViewToggle />
           <Button
             variant="outline"
             size="icon"
-            onClick={() => loadBoard()}
+            onClick={loadIssues}
             disabled={loading}
             title="Refresh"
           >
@@ -49,23 +43,11 @@ export function BoardPage() {
             {error}
           </div>
         )}
-
         <div className="mb-4">
-          <GlobalCreateTask onCreated={loadBoard} />
+          <GlobalCreateTask onCreated={loadIssues} />
         </div>
-
-        <TodoBoard />
+        <TodoListView />
       </main>
-
-      {issueId && (
-        <IssueDetail
-          issueId={Number(issueId)}
-          onClose={() => {
-            searchParams.delete("issue");
-            setSearchParams(searchParams);
-          }}
-        />
-      )}
     </div>
   );
 }
