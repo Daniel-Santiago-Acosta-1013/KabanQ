@@ -89,7 +89,19 @@ The backend image uses `uv` to create its own environment (`uv sync`) and run th
 
 ## Infrastructure (AWS CDK + UV)
 
-The `infra/` directory contains a Python CDK app managed with `uv`:
+The `infra/` directory contains a Python CDK app managed with `uv`. Common operations are exposed through `tasks.py` using [Invoke](https://www.pyinvoke.org/):
+
+```bash
+uv run inv --list              # list all tasks
+uv run inv synth               # synthesize templates into cdk.out
+uv run inv diff                # show CloudFormation diff
+uv run inv deploy-infra        # deploy all stacks
+uv run inv deploy-backend      # build, push and deploy backend image
+uv run inv deploy-frontend     # build and deploy frontend static site
+uv run inv destroy-dev --confirm='destroy kabanq dev'
+```
+
+You can also run CDK commands directly:
 
 ```bash
 cd infra

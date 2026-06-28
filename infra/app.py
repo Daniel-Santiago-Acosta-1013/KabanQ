@@ -24,12 +24,15 @@ database_stack = DatabaseStack(
     env=env,
 )
 
+backend_image_uri = os.environ.get("BACKEND_IMAGE_URI")
+
 backend_stack = BackendStack(
     app,
     "KabanqBackendStack",
     vpc=vpc_stack.vpc,
     cluster=database_stack.cluster,
     db_secret=database_stack.secret,
+    image_uri=backend_image_uri,
     env=env,
 )
 

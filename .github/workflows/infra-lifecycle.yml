@@ -1,0 +1,82 @@
+name: Infra Lifecycle
+
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: CDK action
+        required: true
+        default: plan
+        type: choice
+        options:
+          - plan
+          - apply
+          - destroy
+          - destroy-and-recreate
+      confirm_destroy:
+        description: Type "destroy kabanq dev" for destructive actions
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+env:
+  AWS_REGION: us-east-1
+  AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+  AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+  PROJECT_NAME: kabanq
+  ENVIRONMENT: dev
+
+jobs:
+  lifecycle:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+
+      - name: Install CDK CLI
+        run: npm install -g aws-cdk
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ env.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ env.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Validate destructive confirmation
+        if: inputs.action == 'destroy' || inputs.action == 'destroy-and-recreate'
+        run: |
+          if [[ "${{ inputs.confirm_destroy }}" != "destroy kabanq dev" ]]; then
+            echo "Destructive actions require exact confirmation."
+            exit 1
+          fi
+
+      - name: CDK plan
+        if: inputs.action == 'plan'
+        working-directory: infra
+        run: cdk diff
+
+      - name: CDK apply
+        if: inputs.action == 'apply'
+        working-directory: infra
+        run: cdk deploy --all --require-approval never
+
+      - name: CDK destroy
+        if: inputs.action == 'destroy'
+        working-directory: infra
+        run: cdk destroy --all --force
+
+      - name: CDK destroy and recreate
+        if: inputs.action == 'destroy-and-recreate'
+        working-directory: infra
+        run: |
+          cdk destroy --all --force
+          cdk deploy --all --require-approval never

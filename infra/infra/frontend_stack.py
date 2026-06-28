@@ -1,5 +1,5 @@
 """Frontend S3 + CloudFront stack."""
-from aws_cdk import RemovalPolicy, Stack
+from aws_cdk import CfnOutput, RemovalPolicy, Stack
 from aws_cdk import aws_cloudfront as cloudfront
 from aws_cdk import aws_cloudfront_origins as origins
 from aws_cdk import aws_s3 as s3
@@ -34,4 +34,17 @@ class FrontendStack(Stack):
                     response_page_path="/index.html",
                 ),
             ],
+        )
+
+        CfnOutput(
+            self,
+            "BucketName",
+            value=self.bucket.bucket_name,
+            description="Frontend S3 bucket name",
+        )
+        CfnOutput(
+            self,
+            "DistributionId",
+            value=self.distribution.distribution_id,
+            description="Frontend CloudFront distribution ID",
         )

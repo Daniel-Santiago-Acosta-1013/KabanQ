@@ -1,5 +1,5 @@
 """Backend ECS Fargate service stack."""
-from aws_cdk import Fn, SecretValue, Stack
+from aws_cdk import CfnOutput, Fn, SecretValue, Stack
 from aws_cdk import aws_ec2 as ec2
 from aws_cdk import aws_ecr as ecr
 from aws_cdk import aws_ecs as ecs
@@ -17,6 +17,7 @@ class BackendStack(Stack):
         vpc: ec2.Vpc,
         cluster: rds.DatabaseCluster,
         db_secret: secretsmanager.ISecret,
+        image_uri: str | None = None,
         **kwargs,
     ) -> None:
         super().__init__(scope, construct_id, **kwargs)
@@ -61,6 +62,12 @@ class BackendStack(Stack):
             ),
         )
 
+        container_image = (
+            ecs.ContainerImage.from_registry(image_uri)
+            if image_uri
+            else ecs.ContainerImage.from_ecr_repository(repository)
+        )
+
         fargate_service = ecs_patterns.ApplicationLoadBalancedFargateService(
             self,
             "BackendService",
@@ -71,7 +78,7 @@ class BackendStack(Stack):
             desired_count=1,
             security_groups=[backend_security_group],
             task_image_options=ecs_patterns.ApplicationLoadBalancedTaskImageOptions(
-                image=ecs.ContainerImage.from_ecr_repository(repository),
+                image=container_image,
                 container_port=8000,
                 environment={
                     "PYTHONUNBUFFERED": "1",
@@ -90,3 +97,16 @@ class BackendStack(Stack):
         self.repository = repository
         self.service = fargate_service.service
         self.load_balancer = fargate_service.load_balancer
+
+        CfnOutput(
+            self,
+            "RepositoryUrl",
+            value=repository.repository_uri,
+            description="Backend ECR repository URL",
+        )
+        CfnOutput(
+            self,
+            "LoadBalancerDnsName",
+            value=fargate_service.load_balancer.load_balancer_dns_name,
+            description="Backend ALB DNS name",
+        )

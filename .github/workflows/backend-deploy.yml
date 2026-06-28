@@ -1,0 +1,77 @@
+name: Backend Deploy
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - apps/backend/**
+      - infra/**
+      - .github/workflows/backend-deploy.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  AWS_REGION: us-east-1
+  AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+  AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+  PROJECT_NAME: kabanq
+  ENVIRONMENT: dev
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+
+      - name: Install CDK CLI
+        run: npm install -g aws-cdk
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ env.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ env.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: CDK bootstrap
+        working-directory: infra
+        run: cdk bootstrap
+
+      - name: Deploy backend infrastructure
+        working-directory: infra
+        run: cdk deploy KabanqBackendStack --require-approval never
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build, tag and push backend image
+        working-directory: apps/backend
+        env:
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          REPOSITORY_URL=$(aws ecr describe-repositories \
+            --repository-names kabanq-backend \
+            --query 'repositories[0].repositoryUri' \
+            --output text)
+          IMAGE_URI="${REPOSITORY_URL}:${IMAGE_TAG}"
+          docker build -t "${IMAGE_URI}" .
+          docker tag "${IMAGE_URI}" "${REPOSITORY_URL}:latest"
+          docker push "${IMAGE_URI}"
+          docker push "${REPOSITORY_URL}:latest"
+          echo "BACKEND_IMAGE_URI=${IMAGE_URI}" >> "$GITHUB_ENV"
+
+      - name: Deploy backend with new image
+        working-directory: infra
+        env:
+          BACKEND_IMAGE_URI: ${{ env.BACKEND_IMAGE_URI }}
+        run: cdk deploy KabanqBackendStack --require-approval never
