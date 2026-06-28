@@ -5,7 +5,7 @@ A full-stack Kanban task board built as a monorepo. It features a React 19 + Vit
 ## Tech Stack
 
 - **Frontend:** React 19, Vite 6, Tailwind CSS v4, shadcn/ui, Zustand, Bun
-- **Backend:** Python 3.13, FastAPI, Uvicorn, SQLite (no ORM)
+- **Backend:** Python 3.13, FastAPI, Uvicorn, PostgreSQL (psycopg, no ORM)
 
 > **Note:** The backend uses FastAPI + Pydantic v2, which requires Python ≤3.13. For local development on systems with newer Python versions, use Docker.
 
@@ -66,9 +66,9 @@ The backend image uses `uv` to create its own environment (`uv sync`) and run th
 
 ### Docker details
 
-- `apps/backend/Dockerfile` — `ghcr.io/astral-sh/uv:python3.13-bookworm-slim` + `uv pip install --system` + `uvicorn`
+- `apps/backend/Dockerfile` — `ghcr.io/astral-sh/uv:python3.13-bookworm-slim` + `uv sync` + `uvicorn` (production image, no `--reload`)
 - `apps/frontend/Dockerfile` — `oven/bun:1-slim` + `bun install`
-- `docker-compose.yml` — wires both services; frontend proxies `/api` to the backend container via `VITE_API_URL`.
+- `docker-compose.yml` — wires `postgres`, `backend` and `frontend`; frontend proxies `/api` to the backend container via `VITE_API_URL`.
 
 ## Features
 
@@ -84,8 +84,28 @@ The backend image uses `uv` to create its own environment (`uv sync`) and run th
 - `commands/` — write operations and handlers
 - `queries/` — read projections
 - `models/` — domain models
-- `infrastructure/` — raw SQLite access without ORMs
+- `infrastructure/` — raw PostgreSQL access without ORMs
 - `di/` — lightweight dependency injection container
+
+## Infrastructure (AWS CDK + UV)
+
+The `infra/` directory contains a Python CDK app managed with `uv`:
+
+```bash
+cd infra
+uv sync --python 3.13
+uv run python app.py          # synthesize templates into cdk.out
+uv run cdk deploy --all       # deploy all stacks (requires AWS CDK CLI)
+```
+
+Stacks:
+
+- `VpcStack` — VPC with public and private subnets.
+- `DatabaseStack` — Aurora PostgreSQL serverless v2, security group and Secrets Manager credential.
+- `BackendStack` — ECR repository, ECS Fargate service with ALB; `DATABASE_URL` is injected from the RDS secret.
+- `FrontendStack` — S3 bucket and CloudFront distribution.
+
+> The AWS CDK CLI (`cdk`) is a Node.js tool; install it globally with `npm install -g aws-cdk` or `bun add -g aws-cdk`.
 
 ## Frontend Architecture (FSD)
 

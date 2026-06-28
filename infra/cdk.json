@@ -1,0 +1,16 @@
+{
+  "app": "uv run --python 3.13 python app.py",
+  "watch": {
+    "include": [
+      "**"
+    ],
+    "exclude": [
+      "README.md",
+      "cdk*.json",
+      "pyproject.toml",
+      "uv.lock",
+      "source.bat",
+      "**/cdk.out"
+    ]
+  }
+}

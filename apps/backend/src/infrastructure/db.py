@@ -1,31 +1,34 @@
-"""SQLite database access without ORMs."""
-import sqlite3
+"""PostgreSQL database access without ORMs."""
+import os
 from contextlib import contextmanager
-from pathlib import Path
 from typing import Any
+
+import psycopg
+from psycopg.rows import dict_row
 
 from ..models.todo import Todo, TodoStatus
 
-DB_PATH = Path(__file__).resolve().parent.parent.parent / "data" / "todos.db"
-DB_PATH.parent.mkdir(parents=True, exist_ok=True)
+DATABASE_URL = os.environ.get(
+    "DATABASE_URL",
+    "postgresql://postgres:postgres@localhost:5432/kabanq",
+)
 
 INIT_SCRIPT = """
 CREATE TABLE IF NOT EXISTS todos (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    id SERIAL PRIMARY KEY,
     title TEXT NOT NULL,
     description TEXT NOT NULL DEFAULT '',
     status TEXT NOT NULL DEFAULT 'backlog',
     position INTEGER NOT NULL DEFAULT 0,
-    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 """
 
 
 @contextmanager
 def get_connection():
-    conn = sqlite3.connect(str(DB_PATH))
-    conn.row_factory = sqlite3.Row
+    conn = psycopg.connect(DATABASE_URL, row_factory=dict_row)
     try:
         yield conn
     finally:
@@ -34,18 +37,15 @@ def get_connection():
 
 def init_db() -> None:
     with get_connection() as conn:
-        conn.executescript(INIT_SCRIPT)
-        _migrate_add_position(conn)
+        with conn.cursor() as cur:
+            cur.execute(INIT_SCRIPT)
+            cur.execute(
+                "ALTER TABLE todos ADD COLUMN IF NOT EXISTS position INTEGER NOT NULL DEFAULT 0"
+            )
         conn.commit()
 
 
-def _migrate_add_position(conn: sqlite3.Connection) -> None:
-    columns = [row["name"] for row in conn.execute("PRAGMA table_info(todos)").fetchall()]
-    if "position" not in columns:
-        conn.execute("ALTER TABLE todos ADD COLUMN position INTEGER NOT NULL DEFAULT 0")
-
-
-def row_to_todo(row: sqlite3.Row) -> Todo:
+def row_to_todo(row: dict[str, Any]) -> Todo:
     return Todo(
         id=row["id"],
         title=row["title"],
@@ -63,11 +63,11 @@ class TodoRepository:
     ) -> Todo:
         with get_connection() as conn:
             conn.execute(
-                "UPDATE todos SET position = position + 1 WHERE status = ?",
+                "UPDATE todos SET position = position + 1 WHERE status = %s",
                 (status.value,),
             )
             cur = conn.execute(
-                "INSERT INTO todos (title, description, status, position) VALUES (?, ?, ?, ?) RETURNING *",
+                "INSERT INTO todos (title, description, status, position) VALUES (%s, %s, %s, %s) RETURNING *",
                 (title, description, status.value, position),
             )
             row = cur.fetchone()
@@ -84,7 +84,7 @@ class TodoRepository:
     ) -> Todo:
         with get_connection() as conn:
             current = conn.execute(
-                "SELECT * FROM todos WHERE id = ?", (todo_id,)
+                "SELECT * FROM todos WHERE id = %s", (todo_id,)
             ).fetchone()
             if current is None:
                 raise ValueError(f"Todo with id {todo_id} not found")
@@ -102,7 +102,7 @@ class TodoRepository:
                             """
                             UPDATE todos
                             SET position = position + 1
-                            WHERE status = ? AND position >= ? AND position < ?
+                            WHERE status = %s AND position >= %s AND position < %s
                             """,
                             (new_status.value, new_position, old_position),
                         )
@@ -111,7 +111,7 @@ class TodoRepository:
                             """
                             UPDATE todos
                             SET position = position - 1
-                            WHERE status = ? AND position > ? AND position <= ?
+                            WHERE status = %s AND position > %s AND position <= %s
                             """,
                             (new_status.value, old_position, new_position),
                         )
@@ -120,7 +120,7 @@ class TodoRepository:
                         """
                         UPDATE todos
                         SET position = position - 1
-                        WHERE status = ? AND position > ?
+                        WHERE status = %s AND position > %s
                         """,
                         (old_status.value, old_position),
                     )
@@ -128,7 +128,7 @@ class TodoRepository:
                         """
                         UPDATE todos
                         SET position = position + 1
-                        WHERE status = ? AND position >= ?
+                        WHERE status = %s AND position >= %s
                         """,
                         (new_status.value, new_position),
                     )
@@ -136,8 +136,8 @@ class TodoRepository:
             cur = conn.execute(
                 """
                 UPDATE todos
-                SET title = ?, description = ?, status = ?, position = ?, updated_at = CURRENT_TIMESTAMP
-                WHERE id = ?
+                SET title = %s, description = %s, status = %s, position = %s, updated_at = CURRENT_TIMESTAMP
+                WHERE id = %s
                 RETURNING *
                 """,
                 (title, description, new_status.value, new_position, todo_id),
@@ -149,17 +149,17 @@ class TodoRepository:
     def delete(self, todo_id: int) -> None:
         with get_connection() as conn:
             current = conn.execute(
-                "SELECT status, position FROM todos WHERE id = ?", (todo_id,)
+                "SELECT status, position FROM todos WHERE id = %s", (todo_id,)
             ).fetchone()
             if current is None:
                 raise ValueError(f"Todo with id {todo_id} not found")
 
-            conn.execute("DELETE FROM todos WHERE id = ?", (todo_id,))
+            conn.execute("DELETE FROM todos WHERE id = %s", (todo_id,))
             conn.execute(
                 """
                 UPDATE todos
                 SET position = position - 1
-                WHERE status = ? AND position > ?
+                WHERE status = %s AND position > %s
                 """,
                 (current["status"], current["position"]),
             )
@@ -169,7 +169,7 @@ class TodoRepository:
         sql = "SELECT * FROM todos"
         params: list[Any] = []
         if status:
-            sql += " WHERE status = ?"
+            sql += " WHERE status = %s"
             params.append(status.value)
         sql += " ORDER BY position ASC, updated_at DESC"
         with get_connection() as conn:
@@ -177,7 +177,7 @@ class TodoRepository:
             return [row_to_todo(row) for row in cur.fetchall()]
 
     def get_by_id(self, todo_id: int) -> Todo:
-        sql = "SELECT * FROM todos WHERE id = ?"
+        sql = "SELECT * FROM todos WHERE id = %s"
         with get_connection() as conn:
             cur = conn.execute(sql, (todo_id,))
             row = cur.fetchone()

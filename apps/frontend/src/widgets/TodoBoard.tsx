@@ -3,12 +3,17 @@ import {
   DndContext,
   DragEndEvent,
   DragOverlay,
+  DragOverEvent,
   DragStartEvent,
   closestCenter,
+  pointerWithin,
   useSensor,
   useSensors,
   PointerSensor,
   TouchSensor,
+  CollisionDetection,
+  Active,
+  Over,
 } from "@dnd-kit/core";
 import { useTodoStore } from "@/features/todos";
 import { TodoColumn } from "./TodoColumn";
@@ -32,19 +37,70 @@ function findColumn(board: Record<TodoStatus, { id: number }[]>, id: number): To
   return null;
 }
 
+const collisionDetection: CollisionDetection = (args) => {
+  const pointerCollisions = pointerWithin(args);
+  if (pointerCollisions.length > 0) {
+    return pointerCollisions;
+  }
+  return closestCenter(args);
+};
+
+function computeDropTarget(
+  board: Record<TodoStatus, { id: number }[]>,
+  active: Active,
+  over: Over
+): { status: TodoStatus; index: number } | null {
+  const activeId = Number(active.id);
+  const overId = over.id;
+  const isOverColumn = TODO_STATUSES.some((s) => s.value === overId);
+
+  let targetStatus: TodoStatus;
+  let targetIndex: number;
+
+  if (isOverColumn) {
+    targetStatus = overId as TodoStatus;
+    targetIndex = board[targetStatus].length;
+  } else {
+    const overItemId = Number(overId);
+    const overColumn = findColumn(board, overItemId);
+    if (!overColumn) return null;
+    targetStatus = overColumn;
+    const overIndex = board[targetStatus].findIndex((t) => t.id === overItemId);
+
+    const activeRect = active.rect.current.translated;
+    const overRect = over.rect;
+    if (activeRect && overRect) {
+      const activeCenterY = activeRect.top + activeRect.height / 2;
+      const overCenterY = overRect.top + overRect.height / 2;
+      targetIndex = activeCenterY > overCenterY ? overIndex + 1 : overIndex;
+    } else {
+      targetIndex = overIndex;
+    }
+  }
+
+  const sourceStatus = findColumn(board, activeId);
+  if (sourceStatus === targetStatus) {
+    const sourceIndex = board[sourceStatus].findIndex((t) => t.id === activeId);
+    if (sourceIndex === targetIndex) return null;
+  }
+
+  return { status: targetStatus, index: targetIndex };
+}
+
 export function TodoBoard({ query = "", view = "board" }: TodoBoardProps) {
   const board = useTodoStore((state) => state.board);
   const loadBoard = useTodoStore((state) => state.loadBoard);
   const reorderTodo = useTodoStore((state) => state.reorderTodo);
+  const previewReorder = useTodoStore((state) => state.previewReorder);
   const [showConfetti, setShowConfetti] = React.useState(false);
   const [activeId, setActiveId] = React.useState<number | null>(null);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
-      activationConstraint: { distance: 5 },
+      activationConstraint: { distance: 10 },
     }),
     useSensor(TouchSensor, {
-      activationConstraint: { distance: 5 },
+      activationConstraint: { distance: 10 },
     })
   );
 
@@ -99,41 +155,24 @@ export function TodoBoard({ query = "", view = "board" }: TodoBoardProps) {
     setActiveId(Number(event.active.id));
   };
 
+  const handleDragOver = (event: DragOverEvent) => {
+    const { active, over } = event;
+    if (!over) return;
+    const target = computeDropTarget(board, active, over);
+    if (!target) return;
+    previewReorder(Number(active.id), target.status, target.index);
+  };
+
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
     setActiveId(null);
     if (!over) return;
 
-    const activeId = Number(active.id);
-    const overId = over.id;
-    const isOverColumn = TODO_STATUSES.some((s) => s.value === overId);
+    const target = computeDropTarget(board, active, over);
+    if (!target) return;
 
-    let targetStatus: TodoStatus;
-    let targetIndex: number;
-
-    if (isOverColumn) {
-      targetStatus = overId as TodoStatus;
-      targetIndex = board[targetStatus].length;
-    } else {
-      const overItemId = Number(overId);
-      const overColumn = findColumn(board, overItemId);
-      if (!overColumn) return;
-      targetStatus = overColumn;
-      const overIndex = board[targetStatus].findIndex((t) => t.id === overItemId);
-
-      const activeRect = active.rect.current.translated;
-      const overRect = over.rect;
-      if (activeRect && overRect) {
-        const activeCenterY = activeRect.top + activeRect.height / 2;
-        const overCenterY = overRect.top + overRect.height / 2;
-        targetIndex = activeCenterY > overCenterY ? overIndex + 1 : overIndex;
-      } else {
-        targetIndex = overIndex;
-      }
-    }
-
-    reorderTodo(activeId, targetStatus, targetIndex);
-    if (targetStatus === "done") {
+    reorderTodo(Number(active.id), target.status, target.index);
+    if (target.status === "done") {
       setShowConfetti(true);
     }
   };
@@ -143,8 +182,9 @@ export function TodoBoard({ query = "", view = "board" }: TodoBoardProps) {
       {view === "board" ? (
         <DndContext
           sensors={sensors}
-          collisionDetection={closestCenter}
+          collisionDetection={collisionDetection}
           onDragStart={handleDragStart}
+          onDragOver={handleDragOver}
           onDragEnd={handleDragEnd}
         >
           <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-4 items-start">

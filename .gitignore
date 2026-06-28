@@ -49,3 +49,9 @@ Thumbs.db
 
 # Backend data
 apps/backend/data/
+
+# CDK
+infra/cdk.out/
+infra/*.lock
+infra/package.json
+infra/node_modules/

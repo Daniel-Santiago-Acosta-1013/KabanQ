@@ -88,7 +88,10 @@ export function TodoItem({ todo }: TodoItemProps) {
           {statusLabel(todo.status)}
         </span>
 
-        <div className="flex items-center opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100">
+        <div
+          className="flex items-center opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100"
+          onPointerDown={(e) => e.stopPropagation()}
+        >
           <TodoEditDialog todo={todo} onUpdated={loadBoard} />
           <TodoDeleteButton todoId={todo.id} onDeleted={loadBoard} />
         </div>

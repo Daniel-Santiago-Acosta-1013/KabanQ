@@ -12,6 +12,7 @@ interface TodoState {
   editTodo: (id: number, payload: TodoUpdatePayload) => Promise<void>;
   removeTodo: (id: number) => Promise<void>;
   reorderTodo: (id: number, targetStatus: TodoStatus, targetIndex: number) => Promise<void>;
+  previewReorder: (id: number, targetStatus: TodoStatus, targetIndex: number) => void;
 }
 
 export const useTodoStore = create<TodoState>((set, get) => ({
@@ -90,5 +91,38 @@ export const useTodoStore = create<TodoState>((set, get) => ({
     } catch {
       await get().loadBoard();
     }
+  },
+  previewReorder: (id, targetStatus, targetIndex) => {
+    const { board } = get();
+    const sourceStatus = (Object.keys(board) as TodoStatus[]).find((s) =>
+      board[s].some((t) => t.id === id)
+    );
+    if (!sourceStatus) return;
+
+    const sourceColumn = board[sourceStatus];
+    const sourceIndex = sourceColumn.findIndex((t) => t.id === id);
+    if (sourceIndex === -1) return;
+
+    const todo = sourceColumn[sourceIndex];
+
+    if (sourceStatus === targetStatus && sourceIndex === targetIndex) return;
+
+    const nextBoard: BoardData["board"] = {
+      backlog: [...board.backlog],
+      todo: [...board.todo],
+      in_progress: [...board.in_progress],
+      done: [...board.done],
+    };
+
+    nextBoard[sourceStatus].splice(sourceIndex, 1);
+
+    const adjustedIndex =
+      sourceStatus === targetStatus && sourceIndex < targetIndex
+        ? targetIndex - 1
+        : targetIndex;
+
+    nextBoard[targetStatus].splice(adjustedIndex, 0, { ...todo, status: targetStatus });
+
+    set({ board: nextBoard });
   },
 }));
