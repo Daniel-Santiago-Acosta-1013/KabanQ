@@ -1,5 +1,5 @@
 import { API_BASE } from "@/shared/lib/api";
-import type { BoardData, Todo, TodoStatus } from "./model";
+import type { BoardData, Todo, TodoCreatePayload, TodoUpdatePayload, TodoStatus } from "./model";
 
 export async function fetchBoard(): Promise<BoardData> {
   const res = await fetch(`${API_BASE}/todos/board`);
@@ -14,7 +14,7 @@ export async function fetchTodos(status?: TodoStatus): Promise<Todo[]> {
   return res.json();
 }
 
-export async function createTodo(payload: Omit<Todo, "id" | "created_at" | "updated_at">): Promise<Todo> {
+export async function createTodo(payload: TodoCreatePayload): Promise<Todo> {
   const res = await fetch(`${API_BASE}/todos`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -27,7 +27,7 @@ export async function createTodo(payload: Omit<Todo, "id" | "created_at" | "upda
 
 export async function updateTodo(
   id: number,
-  payload: Omit<Todo, "id" | "created_at" | "updated_at">
+  payload: TodoUpdatePayload
 ): Promise<Todo> {
   const res = await fetch(`${API_BASE}/todos/${id}`, {
     method: "PUT",

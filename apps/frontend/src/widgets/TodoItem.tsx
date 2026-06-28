@@ -1,10 +1,4 @@
 import { Todo } from "@/features/todos/model";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/shared/ui/card";
 import { TodoEditDialog } from "@/features/todos/ui/TodoEditDialog";
 import { TodoDeleteButton } from "@/features/todos/ui/TodoDeleteButton";
 import { useTodoStore } from "@/features/todos";
@@ -12,10 +6,11 @@ import { cn } from "@/shared/lib/utils";
 import { GripVertical, CheckCircle2 } from "lucide-react";
 import { statusLabel } from "@/features/todos/model";
 import { RichTextContent } from "@/shared/ui/rich-text-content";
+import { useSortable } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 
 interface TodoItemProps {
   todo: Todo;
-  index: number;
 }
 
 const statusStyles: Record<Todo["status"], string> = {
@@ -32,48 +27,54 @@ const statusBadgeStyles: Record<Todo["status"], string> = {
   done: "bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300",
 };
 
-export function TodoItem({ todo, index }: TodoItemProps) {
+export function TodoItem({ todo }: TodoItemProps) {
   const loadBoard = useTodoStore((state) => state.loadBoard);
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: todo.id });
 
-  const handleDragStart = (e: React.DragEvent<HTMLDivElement>) => {
-    e.dataTransfer.setData("text/plain", String(todo.id));
-    e.dataTransfer.effectAllowed = "move";
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    zIndex: isDragging ? 50 : undefined,
   };
 
   return (
-    <Card
-      draggable
-      onDragStart={handleDragStart}
+    <div
+      ref={setNodeRef}
+      style={style}
       className={cn(
-        "group relative border border-border/60 border-l-[5px] bg-card shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md animate-in fade-in slide-in-from-bottom-3 cursor-grab active:cursor-grabbing",
+        "group relative rounded-lg border border-border/60 border-l-[5px] bg-card shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md animate-in fade-in slide-in-from-bottom-3",
         statusStyles[todo.status],
-        todo.status === "done" && "opacity-75"
+        todo.status === "done" && "opacity-75",
+        isDragging && "opacity-40 shadow-none ring-2 ring-primary/30"
       )}
-      style={{
-        animationDelay: `${index * 35}ms`,
-        animationFillMode: "backwards",
-      }}
+      {...attributes}
+      {...listeners}
     >
-      <CardHeader className="px-3 pb-1 pt-3">
-        <div className="flex items-start gap-1">
-          <GripVertical className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground/40" />
-          <div className="flex-1">
-            <CardTitle
-              className={cn(
-                "text-sm font-medium leading-snug",
-                todo.status === "done" && "line-through text-muted-foreground"
-              )}
-            >
-              {todo.title}
-            </CardTitle>
-          </div>
+      <div className="flex items-start gap-1 px-3 pt-3">
+        <GripVertical className="mt-0.5 h-4 w-4 shrink-0 cursor-grab text-muted-foreground/40 active:cursor-grabbing" />
+        <div className="flex-1">
+          <h3
+            className={cn(
+              "text-sm font-medium leading-snug",
+              todo.status === "done" && "line-through text-muted-foreground"
+            )}
+          >
+            {todo.title}
+          </h3>
         </div>
-      </CardHeader>
+      </div>
 
       {todo.description && (
-        <CardContent className="px-3 pb-2 pt-0">
+        <div className="px-3 pb-2 pt-0">
           <RichTextContent html={todo.description} compact />
-        </CardContent>
+        </div>
       )}
 
       <div className="flex items-center justify-between px-3 pb-3 pt-0">
@@ -83,9 +84,7 @@ export function TodoItem({ todo, index }: TodoItemProps) {
             statusBadgeStyles[todo.status]
           )}
         >
-          {todo.status === "done" && (
-            <CheckCircle2 className="h-3 w-3" />
-          )}
+          {todo.status === "done" && <CheckCircle2 className="h-3 w-3" />}
           {statusLabel(todo.status)}
         </span>
 
@@ -94,6 +93,6 @@ export function TodoItem({ todo, index }: TodoItemProps) {
           <TodoDeleteButton todoId={todo.id} onDeleted={loadBoard} />
         </div>
       </div>
-    </Card>
+    </div>
   );
 }

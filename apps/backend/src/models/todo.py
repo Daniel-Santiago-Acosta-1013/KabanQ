@@ -18,6 +18,7 @@ class Todo:
     title: str = ""
     description: str = ""
     status: TodoStatus = TodoStatus.BACKLOG
+    position: int = 0
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
 

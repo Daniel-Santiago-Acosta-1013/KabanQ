@@ -14,14 +14,18 @@ class TodoCommandHandler:
 
     def handle_create(self, cmd: CreateTodoCommand) -> CommandResult:
         try:
-            todo = self._repository.create(cmd.title, cmd.description, cmd.status)
+            todo = self._repository.create(
+                cmd.title, cmd.description, cmd.status, cmd.position
+            )
             return CommandResult(todo.__dict__)
         except Exception as exc:
             return CommandResult(None, success=False, error=str(exc))
 
     def handle_update(self, cmd: UpdateTodoCommand) -> CommandResult:
         try:
-            todo = self._repository.update(cmd.todo_id, cmd.title, cmd.description, cmd.status)
+            todo = self._repository.update(
+                cmd.todo_id, cmd.title, cmd.description, cmd.status, cmd.position
+            )
             return CommandResult(todo.__dict__)
         except Exception as exc:
             return CommandResult(None, success=False, error=str(exc))

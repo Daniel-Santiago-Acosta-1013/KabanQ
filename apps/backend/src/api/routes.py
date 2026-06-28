@@ -29,12 +29,14 @@ class TodoCreate(BaseModel):
     title: str = Field(min_length=1, max_length=200)
     description: str = Field(default="", max_length=2000)
     status: TodoStatus = Field(default=TodoStatus.BACKLOG)
+    position: int = Field(default=0)
 
 
 class TodoUpdate(BaseModel):
     title: str = Field(min_length=1, max_length=200)
     description: str = Field(default="", max_length=2000)
     status: TodoStatus
+    position: int | None = Field(default=None)
 
 
 class TodoOut(BaseModel):
@@ -42,6 +44,7 @@ class TodoOut(BaseModel):
     title: str
     description: str
     status: str
+    position: int
     created_at: str
     updated_at: str
 
@@ -72,6 +75,7 @@ def create_todo(payload: TodoCreate):
         title=payload.title,
         description=payload.description,
         status=payload.status,
+        position=payload.position,
     )
     result = container.command_handler.handle_create(cmd)
     if not result.success:
@@ -86,6 +90,7 @@ def update_todo(todo_id: int, payload: TodoUpdate):
         title=payload.title,
         description=payload.description,
         status=payload.status,
+        position=payload.position,
     )
     result = container.command_handler.handle_update(cmd)
     if not result.success:

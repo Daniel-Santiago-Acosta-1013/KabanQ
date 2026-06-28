@@ -14,6 +14,7 @@ class CreateTodoCommand(Command):
     title: str
     description: str
     status: TodoStatus = TodoStatus.BACKLOG
+    position: int = 0
 
 
 @dataclass
@@ -22,6 +23,7 @@ class UpdateTodoCommand(Command):
     title: str
     description: str
     status: TodoStatus
+    position: int | None = None
 
 
 @dataclass

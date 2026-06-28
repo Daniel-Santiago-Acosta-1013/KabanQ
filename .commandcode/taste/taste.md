@@ -10,3 +10,6 @@
 # package-manager
 - Use bun as the default package manager. Confidence: 0.50
 - Use uv exclusively for Python dependency management (not pip, not venv, not `--system`). Confidence: 0.85
+
+# infrastructure
+- Use AWS CDK with Python for infrastructure as code. Confidence: 0.65

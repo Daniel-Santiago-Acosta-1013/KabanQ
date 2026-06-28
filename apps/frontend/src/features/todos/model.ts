@@ -5,6 +5,7 @@ export interface Todo {
   title: string;
   description: string;
   status: TodoStatus;
+  position?: number;
   created_at: string;
   updated_at: string;
 }
@@ -13,6 +14,20 @@ export interface BoardData {
   board: Record<TodoStatus, Todo[]>;
   counts: Record<TodoStatus, number>;
 }
+
+export type TodoCreatePayload = {
+  title: string;
+  description: string;
+  status: TodoStatus;
+  position?: number;
+};
+
+export type TodoUpdatePayload = {
+  title: string;
+  description: string;
+  status: TodoStatus;
+  position?: number;
+};
 
 export const TODO_STATUSES: { value: TodoStatus; label: string; color: string }[] = [
   { value: "backlog", label: "Backlog", color: "bg-slate-500" },
