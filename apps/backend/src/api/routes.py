@@ -9,7 +9,7 @@ from ..commands.todo_commands import (
     UpdateTodoCommand,
 )
 from ..di.container import container
-from ..infrastructure.db import init_db
+from ..database.db import init_db
 from ..models.todo import TodoStatus
 
 app = FastAPI(title="Todo CQRS API", version="1.0.0")

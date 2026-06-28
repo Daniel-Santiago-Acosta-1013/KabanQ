@@ -1,6 +1,6 @@
 """Simple dependency injection container."""
 from ..commands.handlers import TodoCommandHandler
-from ..infrastructure.db import TodoRepository
+from ..database.db import TodoRepository
 from ..queries.todo_queries import TodoQueryHandler
 
 

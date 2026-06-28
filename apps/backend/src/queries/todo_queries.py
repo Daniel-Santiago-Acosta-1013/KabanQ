@@ -1,5 +1,5 @@
 """CQRS read/query side."""
-from ..infrastructure.db import TodoRepository
+from ..database.db import TodoRepository
 from ..models.todo import Todo, TodoStatus
 
 

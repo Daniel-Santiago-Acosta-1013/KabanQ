@@ -5,7 +5,7 @@ from .todo_commands import (
     DeleteTodoCommand,
     UpdateTodoCommand,
 )
-from ..infrastructure.db import TodoRepository
+from ..database.db import TodoRepository
 
 
 class TodoCommandHandler:

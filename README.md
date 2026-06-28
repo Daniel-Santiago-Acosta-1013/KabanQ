@@ -84,7 +84,7 @@ The backend image uses `uv` to create its own environment (`uv sync`) and run th
 - `commands/` — write operations and handlers
 - `queries/` — read projections
 - `models/` — domain models
-- `infrastructure/` — raw PostgreSQL access without ORMs
+- `database/` — raw PostgreSQL access without ORMs
 - `di/` — lightweight dependency injection container
 
 ## Infrastructure (AWS CDK + UV)
