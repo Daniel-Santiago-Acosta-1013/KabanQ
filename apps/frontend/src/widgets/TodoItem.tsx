@@ -2,7 +2,6 @@ import { Todo } from "@/features/todos/model";
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from "@/shared/ui/card";
@@ -12,6 +11,7 @@ import { useTodoStore } from "@/features/todos";
 import { cn } from "@/shared/lib/utils";
 import { GripVertical, CheckCircle2 } from "lucide-react";
 import { statusLabel } from "@/features/todos/model";
+import { RichTextContent } from "@/shared/ui/rich-text-content";
 
 interface TodoItemProps {
   todo: Todo;
@@ -72,9 +72,7 @@ export function TodoItem({ todo, index }: TodoItemProps) {
 
       {todo.description && (
         <CardContent className="px-3 pb-2 pt-0">
-          <CardDescription className="line-clamp-2 text-xs leading-relaxed">
-            {todo.description}
-          </CardDescription>
+          <RichTextContent html={todo.description} compact />
         </CardContent>
       )}
 

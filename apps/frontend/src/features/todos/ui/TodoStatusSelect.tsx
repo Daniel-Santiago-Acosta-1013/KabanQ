@@ -12,18 +12,20 @@ interface TodoStatusSelectProps {
   value: TodoStatus;
   onChange: (value: TodoStatus) => void;
   placeholder?: string;
+  disabled?: boolean;
 }
 
 export function TodoStatusSelect({
   value,
   onChange,
   placeholder = "Select status",
+  disabled = false,
 }: TodoStatusSelectProps) {
   const selected = TODO_STATUSES.find((s) => s.value === value);
 
   return (
-    <Select value={value} onValueChange={onChange}>
-      <SelectTrigger className="h-10">
+    <Select value={value} onValueChange={onChange} disabled={disabled}>
+      <SelectTrigger className="h-8 w-auto gap-1 border-0 bg-transparent px-1 text-xs shadow-none hover:bg-accent focus:ring-0">
         <SelectValue placeholder={placeholder}>
           {selected && (
             <span className="flex items-center gap-2">

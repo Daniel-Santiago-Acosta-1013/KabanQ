@@ -2,8 +2,8 @@ import * as React from "react";
 import { Todo, TODO_STATUSES, TodoStatus } from "@/features/todos/model";
 import { TodoListItem } from "./TodoListItem";
 import { QuickCreateTask } from "@/features/todos/ui/QuickCreateTask";
+import { GlobalCreateTask } from "@/features/todos/ui/GlobalCreateTask";
 import { cn } from "@/shared/lib/utils";
-import { Inbox } from "lucide-react";
 import { useTodoStore } from "@/features/todos";
 
 interface TodoListViewProps {
@@ -48,44 +48,63 @@ export function TodoListView({ todos, onDrop, onCreated }: TodoListViewProps) {
   };
 
   return (
-    <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-      {TODO_STATUSES.map((status) => (
-        <section
-          key={status.value}
-          onDragOver={(e) => handleDragOver(e, status.value)}
-          onDragLeave={handleDragLeave}
-          onDrop={(e) => handleDrop(e, status.value)}
-          className={cn(
-            "rounded-xl border bg-card p-4 shadow-sm transition-all duration-200",
-            dragOverStatus === status.value && "ring-2 ring-primary/40 border-primary/40 scale-[1.01]"
-          )}
-        >
-          <div className="mb-3 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <span className={cn("h-2.5 w-2.5 rounded-full", status.color)} />
-              <h3 className="text-sm font-semibold">{status.label}</h3>
-            </div>
-            <span className="flex h-6 min-w-[1.5rem] items-center justify-center rounded-full bg-secondary px-2 text-xs font-semibold text-secondary-foreground">
-              {counts[status.value] ?? 0}
-            </span>
-          </div>
+    <div className="mx-auto max-w-3xl">
+      <div className="mb-4">
+        <GlobalCreateTask onCreated={onCreated} />
+      </div>
 
-          <div className="flex flex-col gap-2">
-            <QuickCreateTask status={status.value} onCreated={onCreated} color={status.color} />
+      <div className="overflow-hidden rounded-lg border">
+        {TODO_STATUSES.map((status, sectionIndex) => {
+          const sectionTasks = byStatus[status.value];
+          const isDragOver = dragOverStatus === status.value;
+          const isLast = sectionIndex === TODO_STATUSES.length - 1;
 
-            {byStatus[status.value].length === 0 ? (
-              <div className="flex flex-col items-center justify-center gap-2 rounded-lg border border-dashed py-8 text-center text-sm text-muted-foreground">
-                <Inbox className="h-7 w-7 opacity-40" />
-                <span>No tasks</span>
+          return (
+            <section
+              key={status.value}
+              onDragOver={(e) => handleDragOver(e, status.value)}
+              onDragLeave={handleDragLeave}
+              onDrop={(e) => handleDrop(e, status.value)}
+              className={cn(
+                "transition-colors",
+                sectionIndex !== 0 && "border-t",
+                isDragOver && "bg-accent/30"
+              )}
+            >
+              <div className="flex items-center justify-between px-4 py-1.5">
+                <div className="flex items-center gap-2">
+                  <span className={cn("h-1.5 w-1.5 rounded-full", status.color)} />
+                  <h3 className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                    {status.label}
+                  </h3>
+                </div>
+                <span className="text-[11px] font-medium text-muted-foreground">
+                  {counts[status.value] ?? 0}
+                </span>
               </div>
-            ) : (
-              byStatus[status.value].map((todo, index) => (
-                <TodoListItem key={todo.id} todo={todo} index={index} />
-              ))
-            )}
-          </div>
-        </section>
-      ))}
+
+              <QuickCreateTask
+                status={status.value}
+                onCreated={onCreated}
+                color={status.color}
+                variant="list"
+              />
+
+              {sectionTasks.length > 0 && (
+                <div className={cn("border-t", !isLast && sectionTasks.length > 0 && "border-b")}>
+                  {sectionTasks.map((todo, index) => (
+                    <TodoListItem key={todo.id} todo={todo} index={index} />
+                  ))}
+                </div>
+              )}
+            </section>
+          );
+        })}
+      </div>
+
+      <p className="mt-3 text-center text-xs text-muted-foreground">
+        {todos.length} {todos.length === 1 ? "task" : "tasks"}
+      </p>
     </div>
   );
 }

@@ -9,9 +9,15 @@ interface QuickCreateTaskProps {
   status: TodoStatus;
   onCreated?: () => void;
   color?: string;
+  variant?: "card" | "list";
 }
 
-export function QuickCreateTask({ status, onCreated, color }: QuickCreateTaskProps) {
+export function QuickCreateTask({
+  status,
+  onCreated,
+  color,
+  variant = "card",
+}: QuickCreateTaskProps) {
   const [isOpen, setIsOpen] = React.useState(false);
   const [title, setTitle] = React.useState("");
   const [loading, setLoading] = React.useState(false);
@@ -50,6 +56,41 @@ export function QuickCreateTask({ status, onCreated, color }: QuickCreateTaskPro
       setTitle("");
     }
   };
+
+  if (variant === "list") {
+    if (!isOpen) {
+      return (
+        <button
+          type="button"
+          onClick={() => setIsOpen(true)}
+          className="group flex w-full items-center gap-2 px-4 py-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground"
+        >
+          <Plus className="h-3.5 w-3.5 transition-transform group-hover:scale-110" />
+          <span>Add task</span>
+        </button>
+      );
+    }
+
+    return (
+      <form onSubmit={handleSubmit} className="relative px-4 py-1.5">
+        <div className="absolute left-7 top-1/2 -translate-y-1/2">
+          <div className={cn("h-1.5 w-1.5 rounded-full", color ?? "bg-slate-400")} />
+        </div>
+        <Input
+          ref={inputRef}
+          placeholder="Task title..."
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          onKeyDown={handleKeyDown}
+          onBlur={() => {
+            if (!title.trim()) setIsOpen(false);
+          }}
+          disabled={loading}
+          className="h-7 pl-6 pr-3 text-xs bg-transparent border-0 shadow-none focus-visible:ring-1 focus-visible:ring-ring"
+        />
+      </form>
+    );
+  }
 
   if (!isOpen) {
     return (
